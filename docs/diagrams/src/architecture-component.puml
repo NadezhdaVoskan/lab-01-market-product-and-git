@@ -19,51 +19,72 @@ package "Uber Application" {
   }
   
   package "Data Layer" {
-    [Database] as db
-    [Cache] as cache
+    [Database (PostgreSQL)] as db
+    [Cache (Redis)] as cache
   }
   
-  [Message Queue] as queue
+  queue "Message Queue (Kafka)" as queue
+  
+  ' Interface Components
+  () "HTTP/HTTPS" as http_interface
+  () "CRUD" as crud_api
+  () "Read/Write" as cache_api
+  () "Publish/Pull Events" as event_api
+
+  () "REST API" as user_svc_rest_api
+  () "REST API" as payment_svc_rest_api
+  () "REST API" as driver_svc_rest_api
+  () "REST API" as notification_svc_rest_api
+  
+  () "Payment Processing" as payment_api
+  
+  
+  ' Client to API Gateway
+  mobile -down-( http_interface
+  web -down-( http_interface
+  http_interface -down- gateway
+
 }
 
 package "External Systems" {
-  [External Payment Gateway] as ext_payment
+  [External Payment Gateway (Stripe)] as ext_payment
 }
 
-' Client to API Gateway
-mobile --> gateway : HTTP/HTTPS
-web --> gateway : HTTP/HTTPS
 
 ' API Gateway to Business Services
-gateway --> user_svc : REST API
-gateway --> payment_svc : REST API
-gateway --> driver_svc : REST API
-gateway --> notification_svc : REST API
+gateway -down-( user_svc_rest_api
+gateway -down-( payment_svc_rest_api
+gateway -down-( driver_svc_rest_api
+gateway -down-( notification_svc_rest_api
+
+user_svc_rest_api -down- user_svc
+payment_svc_rest_api -down- payment_svc
+driver_svc_rest_api -down- driver_svc
+notification_svc_rest_api -down- notification_svc
+
+db -up- crud_api
+cache -up- cache_api
+queue -up- event_api
 
 ' Business Services to Data Layer
-user_svc --> db : CRUD Operations
-payment_svc --> db : CRUD Operations
-driver_svc --> db : CRUD Operations
-notification_svc --> db : CRUD Operations
+user_svc -down-( crud_api
+payment_svc -down-( crud_api
+driver_svc -down-( crud_api
+notification_svc -down-( crud_api
 
-user_svc --> cache : Read/Write
-payment_svc --> cache : Read/Write
-driver_svc --> cache : Read/Write
-notification_svc --> cache : Read/Write
+user_svc -down-( cache_api
+payment_svc -down-( cache_api
+driver_svc -down-( cache_api
+notification_svc -down-( cache_api
 
 ' Business Services to Message Queue
-user_svc --> queue : Publish Events
-payment_svc --> queue : Publish Events
-driver_svc --> queue : Publish Events
-notification_svc --> queue : Publish Events
-
-' Message Queue to Business Services
-queue --> user_svc : Consume Events
-queue --> payment_svc : Consume Events
-queue --> driver_svc : Consume Events
-queue --> notification_svc : Consume Events
+user_svc -down-( event_api
+payment_svc -down-( event_api
+driver_svc -down-( event_api
+notification_svc -down-( event_api
 
 ' Payment Service to External Payment Gateway
-payment_svc --> ext_payment : Payment Processing
+payment_svc -down-( payment_api
+payment_api -down- ext_payment
 
 @enduml
