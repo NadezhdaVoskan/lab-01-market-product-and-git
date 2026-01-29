@@ -54,6 +54,9 @@
     "esbenp.prettier-vscode",
 
     // Edit Markdown tables.
-    "takumii.markdowntable"
+    "takumii.markdowntable",
+
+    // YAML language support.
+    "redhat.vscode-yaml"
   ]
 }
